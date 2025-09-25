@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrainBlast - Quiz Challenge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .quiz-container {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        .option-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        
+        .option-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .option-card.selected {
+            border-color: #4f46e5;
+            background-color: #eef2ff;
+        }
+        
+        .option-card.correct {
+            border-color: #10b981;
+            background-color: #ecfdf5;
+        }
+        
+        .option-card.incorrect {
+            border-color: #ef4444;
+            background-color: #fef2f2;
+        }
+        
+        .progress-bar {
+            height: 10px;
+            border-radius: 5px;
+            background-color: #e5e7eb;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            transition: width 0.5s ease;
+        }
+        
+        .leaderboard-item {
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .result-badge {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            border-radius: 50px;
+            padding: 5px 15px;
+            font-weight: 600;
+        }
+        
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+        
+        @keyframes floating {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+    </style>
+</head>
+<body class="py-8 px-4">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-10">
+            <h1 class="text-5xl font-bold text-white mb-4 floating">BrainBlast</h1>
+            <p class="text-white text-xl">Challenge your knowledge and track your progress!</p>
+            <div class="w-32 h-1 bg-white mx-auto mt-4 rounded-full"></div>
+        </header>
+
+        <!-- Main Quiz Container -->
+        <div class="quiz-container p-6 md:p-8 mb-8">
+            <!-- Welcome Screen -->
+            <div id="welcomeScreen" class="text-center py-10">
+                <div class="mb-8">
+                    <i class="fas fa-brain text-6xl text-indigo-600 mb-4"></i>
+                    <h2 class="text-3xl font-bold text-gray-800">Ready to Test Your Knowledge?</h2>
+                    <p class="text-gray-600 mt-2">Answer 10 questions and see how you rank on the leaderboard!</p>
+                </div>
+                
+                <div class="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-indigo-50 p-4 rounded-lg">
+                        <i class="fas fa-save text-indigo-500 text-2xl mb-2"></i>
+                        <h3 class="font-semibold">Progress Saved</h3>
+                        <p class="text-sm text-gray-600">Your answers are saved as you go</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <i class="fas fa-trophy text-green-500 text-2xl mb-2"></i>
+                        <h3 class="font-semibold">Leaderboard</h3>
+                        <p class="text-sm text-gray-600">Compete with previous scores</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <i class="fas fa-chart-line text-purple-500 text-2xl mb-2"></i>
+                        <h3 class="font-semibold">Track Progress</h3>
+                        <p class="text-sm text-gray-600">See your improvement over time</p>
+                    </div>
+                </div>
+                
+                <button id="startQuiz" class="bg-indigo-600 text-white px-8 py-3 rounded-full font-semibold hover:bg-indigo-700 transition-colors pulse">
+                    Start Quiz <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+
+            <!-- Quiz Screen -->
+            <div id="quizScreen" class="hidden">
+                <!-- Quiz Header -->
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <span class="text-indigo-600 font-semibold">Question <span id="currentQuestion">1</span>/10</span>
+                        <h2 class="text-2xl font-bold text-gray-800" id="quizTitle">General Knowledge Quiz</h2>
+                    </div>
+                    <div class="text-right">
+                        <div class="result-badge inline-block">
+                            Score: <span id="currentScore">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="mb-8">
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill" style="width: 10%"></div>
+                    </div>
+                </div>
+                
+                <!-- Question -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4" id="questionText">What is the capital of France?</h3>
+                    
+                    <!-- Options -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="optionsContainer">
+                        <!-- Options will be dynamically added here -->
+                    </div>
+                </div>
+                
+                <!-- Navigation Buttons -->
+                <div class="flex justify-between mt-8">
+                    <button id="prevBtn" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg font-medium hover:bg-gray-300 transition-colors hidden">
+                        <i class="fas fa-arrow-left mr-2"></i> Previous
+                    </button>
+                    <button id="nextBtn" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors ml-auto">
+                        Next <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                    <button id="submitQuiz" class="bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors hidden">
+                        Submit Quiz <i class="fas fa-check ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Screen -->
+            <div id="resultsScreen" class="hidden text-center py-10">
+                <div class="mb-8">
+                    <i class="fas fa-trophy text-6xl text-yellow-500 mb-4"></i>
+                    <h2 class="text-3xl font-bold text-gray-800">Quiz Completed!</h2>
+                    <p class="text-gray-600 mt-2">Here's how you performed</p>
+                </div>
+                
+                <!-- Score Card -->
+                <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl p-8 max-w-md mx-auto mb-8 shadow-lg">
+                    <h3 class="text-2xl font-bold mb-2">Your Score</h3>
+                    <div class="text-5xl font-bold mb-4" id="finalScore">0/10</div>
+                    <div class="text-xl" id="performanceText">Keep practicing!</div>
+                </div>
+                
+                <!-- Leaderboard -->
+                <div class="max-w-md mx-auto mb-8 text-left">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-chart-bar mr-2 text-indigo-600"></i> Leaderboard
+                    </h3>
+                    <div id="leaderboard" class="bg-white rounded-lg shadow-inner p-4 max-h-64 overflow-y-auto">
+                        <!-- Leaderboard items will be dynamically added here -->
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex justify-center space-x-4">
+                    <button id="restartQuiz" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors">
+                        <i class="fas fa-redo mr-2"></i> Try Again
+                    </button>
+                    <button id="resetQuiz" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg font-medium hover:bg-gray-300 transition-colors">
+                        <i class="fas fa-trash-alt mr-2"></i> Reset All
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="text-center text-white text-sm mt-8">
+            <p>Progress saved in session storage. Results saved in local storage.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Quiz questions
+        const quizQuestions = [
+            {
+                question: "Which planet is known as the Red Planet?",
+                options: ["Venus", "Mars", "Jupiter", "Saturn"],
+                correct: 1
+            },
+            {
+                question: "What is the largest mammal in the world?",
+                options: ["Elephant", "Blue Whale", "Giraffe", "Polar Bear"],
+                correct: 1
+            },
+            {
+                question: "Which element has the chemical symbol 'O'?",
+                options: ["Gold", "Oxygen", "Osmium", "Oganesson"],
+                correct: 1
+            },
+            {
+                question: "Who painted the Mona Lisa?",
+                options: ["Vincent van Gogh", "Pablo Picasso", "Leonardo da Vinci", "Michelangelo"],
+                correct: 2
+            },
+            {
+                question: "What is the smallest country in the world?",
+                options: ["Monaco", "Maldives", "Vatican City", "San Marino"],
+                correct: 2
+            },
+            {
+                question: "Which language has the most native speakers?",
+                options: ["English", "Spanish", "Mandarin Chinese", "Hindi"],
+                correct: 2
+            },
+            {
+                question: "What is the hardest natural substance on Earth?",
+                options: ["Gold", "Iron", "Diamond", "Platinum"],
+                correct: 2
+            },
+            {
+                question: "Which ocean is the largest?",
+                options: ["Atlantic Ocean", "Indian Ocean", "Arctic Ocean", "Pacific Ocean"],
+                correct: 3
+            },
+            {
+                question: "How many bones are in the human body?",
+                options: ["196", "206", "216", "226"],
+                correct: 1
+            },
+            {
+                question: "What year did the Titanic sink?",
+                options: ["1912", "1914", "1916", "1918"],
+                correct: 0
+            }
+        ];
+
+        // DOM Elements
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        const quizScreen = document.getElementById('quizScreen');
+        const resultsScreen = document.getElementById('resultsScreen');
+        const startQuizBtn = document.getElementById('startQuiz');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const submitQuizBtn = document.getElementById('submitQuiz');
+        const restartQuizBtn = document.getElementById('restartQuiz');
+        const resetQuizBtn = document.getElementById('resetQuiz');
+        const questionText = document.getElementById('questionText');
+        const optionsContainer = document.getElementById('optionsContainer');
+        const currentQuestionEl = document.getElementById('currentQuestion');
+        const currentScoreEl = document.getElementById('currentScore');
+        const progressFill = document.getElementById('progressFill');
+        const finalScoreEl = document.getElementById('finalScore');
+        const performanceText = document.getElementById('performanceText');
+        const leaderboard = document.getElementById('leaderboard');
+
+        // Quiz state
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let userAnswers = [];
+        let leaderboardData = [];
+
+        // Initialize the app
+        function init() {
+            // Load saved progress from sessionStorage
+            const savedProgress = sessionStorage.getItem('quizProgress');
+            if (savedProgress) {
+                const progress = JSON.parse(savedProgress);
+                currentQuestionIndex = progress.currentQuestionIndex;
+                score = progress.score;
+                userAnswers = progress.userAnswers;
+                
+                // Show quiz screen if in progress
+                if (currentQuestionIndex > 0) {
+                    showQuizScreen();
+                }
+            }
+            
+            // Load leaderboard from localStorage
+            const savedLeaderboard = localStorage.getItem('quizLeaderboard');
+            if (savedLeaderboard) {
+                leaderboardData = JSON.parse(savedLeaderboard);
+            }
+            
+            // Add event listeners
+            startQuizBtn.addEventListener('click', startQuiz);
+            prevBtn.addEventListener('click', showPreviousQuestion);
+            nextBtn.addEventListener('click', showNextQuestion);
+            submitQuizBtn.addEventListener('click', showResults);
+            restartQuizBtn.addEventListener('click', restartQuiz);
+            resetQuizBtn.addEventListener('click', resetQuiz);
+            
+            // Render leaderboard
+            renderLeaderboard();
+        }
+
+        // Start the quiz
+        function startQuiz() {
+            // Reset quiz state
+            currentQuestionIndex = 0;
+            score = 0;
+            userAnswers = new Array(quizQuestions.length).fill(null);
+            
+            // Show quiz screen
+            showQuizScreen();
+            
+            // Save initial state to sessionStorage
+            saveProgress();
+        }
+
+        // Show quiz screen
+        function showQuizScreen() {
+            welcomeScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            resultsScreen.classList.add('hidden');
+            
+            // Display current question
+            displayQuestion();
+            
+            // Update navigation buttons
+            updateNavigation();
+        }
+
+        // Display current question
+        function displayQuestion() {
+            const question = quizQuestions[currentQuestionIndex];
+            
+            // Update question text and number
+            questionText.textContent = question.question;
+            currentQuestionEl.textContent = currentQuestionIndex + 1;
+            currentScoreEl.textContent = score;
+            
+            // Update progress bar
+            progressFill.style.width = `${((currentQuestionIndex + 1) / quizQuestions.length) * 100}%`;
+            
+            // Clear options container
+            optionsContainer.innerHTML = '';
+            
+            // Create option cards
+            question.options.forEach((option, index) => {
+                const optionCard = document.createElement('div');
+                optionCard.className = 'option-card bg-white p-4 rounded-lg shadow-md';
+                optionCard.innerHTML = `
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-semibold mr-3">
+                            ${String.fromCharCode(65 + index)}
+                        </div>
+                        <span>${option}</span>
+                    </div>
+                `;
+                
+                // Check if this option was previously selected
+                if (userAnswers[currentQuestionIndex] === index) {
+                    optionCard.classList.add('selected');
+                }
+                
+                // Add click event
+                optionCard.addEventListener('click', () => selectOption(index));
+                
+                optionsContainer.appendChild(optionCard);
+            });
+        }
+
+        // Select an option
+        function selectOption(optionIndex) {
+            // Update user answers
+            userAnswers[currentQuestionIndex] = optionIndex;
+            
+            // Check if answer is correct
+            const question = quizQuestions[currentQuestionIndex];
+            if (optionIndex === question.correct) {
+                // Only add score if not already scored for this question
+                if (userAnswers[currentQuestionIndex] !== question.correct) {
+                    score++;
+                }
+            } else {
+                // Remove score if changing from correct to incorrect
+                if (userAnswers[currentQuestionIndex] === question.correct) {
+                    score--;
+                }
+            }
+            
+            // Update UI
+            currentScoreEl.textContent = score;
+            
+            // Update option cards
+            const optionCards = document.querySelectorAll('.option-card');
+            optionCards.forEach((card, index) => {
+                card.classList.remove('selected', 'correct', 'incorrect');
+                
+                if (index === optionIndex) {
+                    card.classList.add('selected');
+                }
+                
+                // Show correct/incorrect feedback (for learning purposes)
+                if (index === question.correct) {
+                    card.classList.add('correct');
+                } else if (index === optionIndex && optionIndex !== question.correct) {
+                    card.classList.add('incorrect');
+                }
+            });
+            
+            // Save progress
+            saveProgress();
+        }
+
+        // Show previous question
+        function showPreviousQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                displayQuestion();
+                updateNavigation();
+            }
+        }
+
+        // Show next question
+        function showNextQuestion() {
+            if (currentQuestionIndex < quizQuestions.length - 1) {
+                currentQuestionIndex++;
+                displayQuestion();
+                updateNavigation();
+            }
+        }
+
+        // Update navigation buttons
+        function updateNavigation() {
+            // Show/hide previous button
+            if (currentQuestionIndex > 0) {
+                prevBtn.classList.remove('hidden');
+            } else {
+                prevBtn.classList.add('hidden');
+            }
+            
+            // Show submit button on last question
+            if (currentQuestionIndex === quizQuestions.length - 1) {
+                nextBtn.classList.add('hidden');
+                submitQuizBtn.classList.remove('hidden');
+            } else {
+                nextBtn.classList.remove('hidden');
+                submitQuizBtn.classList.add('hidden');
+            }
+        }
+
+        // Show results screen
+        function showResults() {
+            // Calculate final score
+            const finalScore = score;
+            
+            // Add to leaderboard
+            const quizResult = {
+                score: finalScore,
+                total: quizQuestions.length,
+                date: new Date().toLocaleDateString(),
+                time: new Date().toLocaleTimeString()
+            };
+            
+            leaderboardData.push(quizResult);
+            leaderboardData.sort((a, b) => b.score - a.score);
+            
+            // Keep only top 10 scores
+            if (leaderboardData.length > 10) {
+                leaderboardData = leaderboardData.slice(0, 10);
+            }
+            
+            // Save leaderboard to localStorage
+            localStorage.setItem('quizLeaderboard', JSON.stringify(leaderboardData));
+            
+            // Clear sessionStorage
+            sessionStorage.removeItem('quizProgress');
+            
+            // Update results screen
+            finalScoreEl.textContent = `${finalScore}/${quizQuestions.length}`;
+            
+            // Set performance text
+            const percentage = (finalScore / quizQuestions.length) * 100;
+            if (percentage >= 90) {
+                performanceText.textContent = "Outstanding! You're a quiz master!";
+            } else if (percentage >= 70) {
+                performanceText.textContent = "Great job! You know your stuff!";
+            } else if (percentage >= 50) {
+                performanceText.textContent = "Good effort! Keep learning!";
+            } else {
+                performanceText.textContent = "Keep practicing! You'll get better!";
+            }
+            
+            // Render leaderboard
+            renderLeaderboard();
+            
+            // Show results screen
+            welcomeScreen.classList.add('hidden');
+            quizScreen.classList.add('hidden');
+            resultsScreen.classList.remove('hidden');
+        }
+
+        // Render leaderboard
+        function renderLeaderboard() {
+            leaderboard.innerHTML = '';
+            
+            if (leaderboardData.length === 0) {
+                leaderboard.innerHTML = '<p class="text-gray-500 text-center py-4">No scores yet. Be the first!</p>';
+                return;
+            }
+            
+            leaderboardData.forEach((result, index) => {
+                const leaderboardItem = document.createElement('div');
+                leaderboardItem.className = 'leaderboard-item flex justify-between items-center py-3 border-b border-gray-200';
+                leaderboardItem.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="w-6 h-6 rounded-full ${index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : index === 2 ? 'bg-amber-700' : 'bg-gray-200'} text-white flex items-center justify-center text-xs font-bold mr-3">${index + 1}</span>
+                        <div>
+                            <div class="font-medium">Score: ${result.score}/${result.total}</div>
+                            <div class="text-xs text-gray-500">${result.date} ${result.time}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-semibold">${Math.round((result.score / result.total) * 100)}%</div>
+                    </div>
+                `;
+                leaderboard.appendChild(leaderboardItem);
+            });
+        }
+
+        // Restart quiz
+        function restartQuiz() {
+            startQuiz();
+        }
+
+        // Reset quiz (clear all data)
+        function resetQuiz() {
+            // Clear localStorage and sessionStorage
+            localStorage.removeItem('quizLeaderboard');
+            sessionStorage.removeItem('quizProgress');
+            
+            // Reset state
+            leaderboardData = [];
+            
+            // Render empty leaderboard
+            renderLeaderboard();
+            
+            // Show welcome screen
+            welcomeScreen.classList.remove('hidden');
+            quizScreen.classList.add('hidden');
+            resultsScreen.classList.add('hidden');
+        }
+
+        // Save progress to sessionStorage
+        function saveProgress() {
+            const progress = {
+                currentQuestionIndex: currentQuestionIndex,
+                score: score,
+                userAnswers: userAnswers
+            };
+            
+            sessionStorage.setItem('quizProgress', JSON.stringify(progress));
+        }
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
